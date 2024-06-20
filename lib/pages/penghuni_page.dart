@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -24,7 +22,7 @@ class _PenghuniPageState extends State<PenghuniPage> {
       body: Column(
         children: [
           Container(
-            color: Color(0xFFFFC397),
+            color: const Color(0xFFD33A53),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: ['B', 'C'].map((blok) {
@@ -37,7 +35,9 @@ class _PenghuniPageState extends State<PenghuniPage> {
                   child: Text(
                     'Blok $blok',
                     style: TextStyle(
-                      color: selectedBlok == blok ? Colors.blue : Colors.black,
+                      color: selectedBlok == blok
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.5),
                     ),
                   ),
                 );
@@ -46,31 +46,34 @@ class _PenghuniPageState extends State<PenghuniPage> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('penghuni').snapshots(),
+              stream:
+                  FirebaseFirestore.instance.collection('penghuni').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Terdapat Masalah'));
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 final data = snapshot.requireData;
 
                 final filteredDocs = data.docs.where((doc) {
-                  return (doc.data() as Map<String, dynamic>)['blok'] == selectedBlok;
+                  return (doc.data() as Map<String, dynamic>)['blok'] ==
+                      selectedBlok;
                 }).toList();
 
                 return ListView(
                   children: filteredDocs.map((DocumentSnapshot document) {
                     try {
-                      final penghuni = Penghuni.fromMap(document.data() as Map<String, dynamic>);
-                      return DataPenghuni(penghuni: penghuni, documentId: document.id);
+                      final penghuni = Penghuni.fromMap(
+                          document.data() as Map<String, dynamic>, document.id);
+                      return DataPenghuni(
+                          penghuni: penghuni, documentId: document.id);
                     } catch (e) {
-                      print('Database Error ${document.id}: $e');
                       return ListTile(
-                        title: Text('Data Error'),
+                        title: const Text('Data Error'),
                         subtitle: Text('ID: ${document.id}'),
                       );
                     }
@@ -104,24 +107,49 @@ class DataPenghuni extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: EdgeInsets.all(15.0),
+      margin: EdgeInsets.all(15),
       child: Container(
-        color: Color(0xFFFFC397),
-        padding: EdgeInsets.all(10.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: Color(0xFFD7D7D7),
+            width: 3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: Offset(0, 5),
+            ),
+          ],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: EdgeInsets.all(5),
         child: Column(
           children: [
             ListTile(
               title: Row(
                 children: [
-                  Icon(Icons.person),
+                  const Icon(
+                    Icons.person,
+                    color: Color.fromARGB(255, 0, 0, 0),
+                  ),
                   SizedBox(width: 12),
                   Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(penghuni.name, style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(penghuni.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: const Color.fromARGB(255, 0, 0, 0),
+                          )),
+                    ),
                   ),
+                  Text(
+                    '${penghuni.blok}${penghuni.noblok} no. ${penghuni.numb}',
+                    style: TextStyle(color: const Color.fromARGB(255, 0, 0, 0)),
                   ),
-                  Text('${penghuni.blok}${penghuni.noblok} no. ${penghuni.numb}'),
                 ],
               ),
               subtitle: Column(
@@ -129,56 +157,92 @@ class DataPenghuni extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.phone),
+                      Icon(Icons.phone,
+                          color: const Color.fromARGB(255, 0, 0, 0)),
                       SizedBox(width: 12),
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(penghuni.phone),
+                          child: Text(
+                            penghuni.phone,
+                            style: TextStyle(
+                                color: const Color.fromARGB(255, 0, 0, 0)),
+                          ),
                         ),
                       ),
-                      Text('AC: ${penghuni.ac ? 'Yes' : 'No'}'),
+                      Text(
+                        'AC: ${penghuni.ac ? 'Yes' : 'No'}',
+                        style: TextStyle(
+                            color: const Color.fromARGB(255, 0, 0, 0)),
+                      ),
                     ],
                   ),
                   Row(
                     children: [
-                      Icon(penghuni.gender == 'Laki-laki' ? Icons.male : Icons.female),
+                      Icon(
+                        penghuni.gender == 'Laki-laki'
+                            ? Icons.male
+                            : Icons.female,
+                        color: penghuni.gender == 'Laki-laki'
+                            ? Colors.blue
+                            : const Color.fromARGB(255, 236, 65, 122),
+                      ),
                       SizedBox(width: 12),
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(penghuni.gender),
+                          child: Text(
+                            penghuni.gender,
+                            style: TextStyle(
+                                color: const Color.fromARGB(255, 0, 0, 0)),
+                          ),
                         ),
                       ),
-                      Text('Heater: ${penghuni.heater ? 'Yes' : 'No'}'),
+                      Text(
+                        'Heater: ${penghuni.heater ? 'Yes' : 'No'}',
+                        style: TextStyle(
+                            color: const Color.fromARGB(255, 0, 0, 0)),
+                      ),
                     ],
                   ),
                   Row(
                     children: [
-                      Icon(Icons.calendar_today),
+                      Icon(Icons.calendar_today,
+                          color: const Color.fromARGB(255, 0, 0, 0)),
                       SizedBox(width: 12),
-                      Text(DateFormat('dd - MM - yyyy').format(penghuni.date)),
+                      Text(
+                        DateFormat('dd - MM - yyyy').format(penghuni.date),
+                        style: TextStyle(
+                            color: const Color.fromARGB(255, 0, 0, 0)),
+                      ),
                     ],
                   ),
                   Row(
                     children: [
-                      Icon(Icons.credit_card),
+                      Icon(Icons.credit_card,
+                          color: const Color.fromARGB(255, 0, 0, 0)),
                       SizedBox(width: 12),
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text('Rp${penghuni.price.toStringAsFixed(0)}'),
+                          child: Text(
+                            'Rp${penghuni.price.toStringAsFixed(0)}',
+                            style: TextStyle(
+                                color: const Color.fromARGB(255, 0, 0, 0)),
+                          ),
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
+                        icon: Icon(Icons.delete,
+                            color: Color.fromARGB(255, 255, 0, 0)),
                         onPressed: () {
                           showDialog(
                             context: context,
                             builder: (BuildContext context) {
                               return AlertDialog(
                                 title: Text('Hapus Data'),
-                                content: Text('Apakah Anda Ingin Menghapus Data Ini?'),
+                                content: Text(
+                                    'Apakah Anda Ingin Menghapus Data Ini?'),
                                 actions: <Widget>[
                                   TextButton(
                                     onPressed: () {
@@ -188,7 +252,10 @@ class DataPenghuni extends StatelessWidget {
                                   ),
                                   TextButton(
                                     onPressed: () {
-                                      FirebaseFirestore.instance.collection('penghuni').doc(documentId).delete();
+                                      FirebaseFirestore.instance
+                                          .collection('penghuni')
+                                          .doc(documentId)
+                                          .delete();
                                       Navigator.of(context).pop();
                                     },
                                     child: Text('YES'),

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Penghuni {
+  final String id;
   final String name;
   final String phone;
   final String gender;
@@ -11,8 +12,11 @@ class Penghuni {
   final double price;
   final bool ac;
   final bool heater;
+  final String status;
+  Map<String, bool> paymentHistory;
 
   Penghuni({
+    required this.id,
     required this.name,
     required this.phone,
     required this.gender,
@@ -23,9 +27,11 @@ class Penghuni {
     required this.price,
     required this.ac,
     required this.heater,
+    required this.status,
+    required this.paymentHistory,
   });
 
-  factory Penghuni.fromMap(Map<String, dynamic> data) {
+  factory Penghuni.fromMap(Map<String, dynamic> data, String id) {
     late DateTime date;
     if (data['date'] is Timestamp) {
       date = (data['date'] as Timestamp).toDate();
@@ -36,17 +42,25 @@ class Penghuni {
     }
 
     return Penghuni(
+      id: id,
       name: data['name'] ?? '',
       phone: data['phone'] ?? '',
       gender: data['gender'] ?? '',
       date: date,
-      price: (data['price'] is int ? data['price'].toDouble() : data['price']) ?? 0.0,
       blok: data['blok'] ?? '',
       noblok: data['noblok'] ?? 0,
       numb: data['numb'] ?? 0,
+      price: (data['price'] is int ? data['price'].toDouble() : data['price']) ?? 0.0,
       ac: data['ac'] ?? false,
       heater: data['heater'] ?? false,
+      status: data['status'] ?? 'Unknown',
+      paymentHistory: Map<String, bool>.from(data['paymentHistory'] ?? {}),
     );
+  }
+
+  factory Penghuni.fromFirestore(DocumentSnapshot<Object?> doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Penghuni.fromMap(data, doc.id);
   }
 
   Map<String, dynamic> toMap() {
@@ -61,6 +75,13 @@ class Penghuni {
       'price': price,
       'ac': ac,
       'heater': heater,
+      'status': status,
+      'paymentHistory': paymentHistory,
     };
+  }
+
+  void updatePaymentStatus(int month, int year, bool sudahBayar) {
+    String key = '$month-$year';
+    paymentHistory[key] = sudahBayar;
   }
 }

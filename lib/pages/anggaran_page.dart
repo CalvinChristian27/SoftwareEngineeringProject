@@ -12,8 +12,11 @@ class AnggaranPage extends StatefulWidget {
 class _AnggaranPageState extends State<AnggaranPage> {
   double totalNaik = 0;
   double totalTurun = 0;
+  double profit = 0;
+  double lost = 0;
   List<Anggaran> anggaranList = [];
   int selectedYear = DateTime.now().year;
+  int selectedMonth = DateTime.now().month;
 
   @override
   void initState() {
@@ -22,12 +25,17 @@ class _AnggaranPageState extends State<AnggaranPage> {
   }
 
   Future<void> _getAnggaranData() async {
-    final snapshot = await FirebaseFirestore.instance.collection('transaksi')
-      .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(selectedYear, 1, 1)))
-      .where('date', isLessThanOrEqualTo: Timestamp.fromDate(DateTime(selectedYear, 12, 31)))
-      .get();
+    final startOfMonth = DateTime(selectedYear, selectedMonth, 1);
+    final endOfMonth = DateTime(selectedYear, selectedMonth + 1, 0);
 
-    final data = snapshot.docs.map((doc) => Anggaran.fromMap(doc.data())).toList();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('transaksi')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
+        .get();
+
+    final data =
+        snapshot.docs.map((doc) => Anggaran.fromMap(doc.data())).toList();
 
     double naik = 0;
     double turun = 0;
@@ -44,6 +52,23 @@ class _AnggaranPageState extends State<AnggaranPage> {
       anggaranList = data;
       totalNaik = naik;
       totalTurun = turun;
+
+      if (totalNaik > totalTurun) {
+        profit = totalNaik - totalTurun;
+        lost = 0;
+      } else {
+        profit = 0;
+        lost = totalTurun - totalNaik;
+      }
+    });
+
+    await FirebaseFirestore.instance
+        .collection('anggaran')
+        .doc('${selectedYear}_${selectedMonth}')
+        .set({
+      'profit': profit,
+      'lost': lost,
+      'date': Timestamp.now(),
     });
   }
 
@@ -51,7 +76,7 @@ class _AnggaranPageState extends State<AnggaranPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Anggaran Tahun Ini'),
+        title: Text('Anggaran Bulanan'),
       ),
       body: Padding(
         padding: EdgeInsets.all(16),
@@ -76,7 +101,7 @@ class _AnggaranPageState extends State<AnggaranPage> {
             SizedBox(height: 16),
             Expanded(child: _buildTransactionList()),
           ],
-        ),    
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -90,24 +115,44 @@ class _AnggaranPageState extends State<AnggaranPage> {
       ),
     );
   }
-  
 
   Widget _buildDateSelector() {
-    return DropdownButton<int>(
-      value: selectedYear,
-      items: List.generate(
-        301,
-        (index) => DropdownMenuItem(
-          child: Text((2000 + index).toString()),
-          value: 2000 + index,
+    return Row(
+      children: [
+        DropdownButton<int>(
+          value: selectedMonth,
+          items: List.generate(
+            12,
+            (index) => DropdownMenuItem(
+              child: Text(DateFormat.MMMM().format(DateTime(0, index + 1))),
+              value: index + 1,
+            ),
+          ),
+          onChanged: (value) {
+            setState(() {
+              selectedMonth = value!;
+              _getAnggaranData();
+            });
+          },
         ),
-      ),
-      onChanged: (value) {
-        setState(() {
-          selectedYear = value!;
-          _getAnggaranData();
-        });
-      },
+        SizedBox(width: 16),
+        DropdownButton<int>(
+          value: selectedYear,
+          items: List.generate(
+            101,
+            (index) => DropdownMenuItem(
+              child: Text((2000 + index).toString()),
+              value: 2000 + index,
+            ),
+          ),
+          onChanged: (value) {
+            setState(() {
+              selectedYear = value!;
+              _getAnggaranData();
+            });
+          },
+        ),
+      ],
     );
   }
 
@@ -148,14 +193,19 @@ class _AnggaranPageState extends State<AnggaranPage> {
         return ListTile(
           leading: Icon(
             size: 45,
-            item.status == 'Penghasilan' ? Icons.arrow_circle_up : Icons.arrow_circle_down,
+            item.status == 'Penghasilan'
+                ? Icons.arrow_circle_up
+                : Icons.arrow_circle_down,
             color: item.status == 'Penghasilan' ? Colors.green : Colors.red,
           ),
           title: Text(item.desc),
           subtitle: Text(DateFormat('dd - MM - yyyy').format(item.date)),
           trailing: Text(
             'Rp${item.price.toStringAsFixed(0)}',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         );
       },

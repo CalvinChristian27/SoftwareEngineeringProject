@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:kostmanagement/models/penghuni.dart';
+import 'package:kostmanagement/pages/payment_method.dart';
 
 class TransaksiPage extends StatefulWidget {
   @override
@@ -9,297 +11,259 @@ class TransaksiPage extends StatefulWidget {
 }
 
 class _TransaksiPageState extends State<TransaksiPage> {
-  String selectedBlok = 'B';
-  String selectedMonth = DateFormat('MMMM').format(DateTime.now());
+  int selectedMonth = DateTime.now().month;
   int selectedYear = DateTime.now().year;
-  List<String> months = List<String>.generate(12, (int index) {
-    return DateFormat('MMMM').format(DateTime(0, index + 1));
-  });
+  String selectedBlok = 'B';
+  String filterStatus = 'All';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: Text('Transaksi'),
+        title: Text('Penghuni Kos'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PaymentMethodPage()),
+          );
+        },
+        child: Icon(Icons.add),
+        backgroundColor: Colors.blue,
       ),
       body: Column(
         children: [
           Container(
-            color: Color(0xFFFFC397),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: ['B', 'C'].map((blok) {
-                return TextButton(
-                  onPressed: () {
-                    setState(() {
-                      selectedBlok = blok;
-                    });
-                  },
-                  child: Text(
-                    'Blok $blok',
-                    style: TextStyle(
-                      color: selectedBlok == blok ? Colors.blue : Colors.black,
-                    ),
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              children: [
+                Container(
+                  color: const Color(0xFFD33A53),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: ['B', 'C'].map((blok) {
+                      return TextButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedBlok = blok;
+                          });
+                        },
+                        child: Text(
+                          'Blok $blok',
+                          style: TextStyle(
+                            color: selectedBlok == blok
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.5),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                );
-              }).toList(),
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.all(10),
-            child: DropdownButton<String>(
-              value: '$selectedMonth $selectedYear',
-              items: [
-                for (int year = 2000; year <= DateTime.now().year + 1; year++)
-                  for (String month in months)
-                    DropdownMenuItem(
-                      value: '$month $year',
-                      child: Text('$month $year'),
-                    )
+                ),
+                Row(
+                  children: [
+                    SizedBox(width: 20),
+                    DropdownButton<int>(
+                      value: selectedMonth,
+                      onChanged: (int? newValue) {
+                        setState(() {
+                          selectedMonth = newValue!;
+                        });
+                      },
+                      items: List<DropdownMenuItem<int>>.generate(12, (index) {
+                        return DropdownMenuItem<int>(
+                          value: index + 1,
+                          child: Text(
+                              DateFormat.MMMM().format(DateTime(0, index + 1))),
+                        );
+                      }),
+                    ),
+                    SizedBox(width: 16),
+                    DropdownButton<int>(
+                      value: selectedYear,
+                      items: List.generate(
+                        101,
+                        (index) => DropdownMenuItem(
+                          child: Text((2000 + index).toString()),
+                          value: 2000 + index,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedYear = value!;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          filterStatus = filterStatus == 'Sudah Bayar'
+                              ? 'All'
+                              : 'Sudah Bayar';
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: filterStatus == 'Sudah Bayar'
+                            ? Colors.green
+                            : Colors.grey,
+                      ),
+                      child: Text('Sudah Bayar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          filterStatus = filterStatus == 'Belum Bayar'
+                              ? 'All'
+                              : 'Belum Bayar';
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: filterStatus == 'Belum Bayar'
+                            ? Colors.red
+                            : Colors.grey,
+                      ),
+                      child: Text('Belum Bayar'),
+                    ),
+                  ],
+                ),
               ],
-              onChanged: (newValue) {
-                setState(() {
-                  var parts = newValue!.split(' ');
-                  selectedMonth = parts[0];
-                  selectedYear = int.parse(parts[1]);
-                });
-              },
             ),
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('penghuni').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('penghuni')
+                  .where('blok', isEqualTo: selectedBlok)
+                  .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('Terdapat Masalah'));
-                }
-
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
                 }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text('No data found.'));
+                }
+                List<DocumentSnapshot> penghuniDocs = snapshot.data!.docs;
 
-                final data = snapshot.requireData;
+                if (filterStatus != 'All') {
+                  penghuniDocs = penghuniDocs.where((doc) {
+                    final penghuni = Penghuni.fromFirestore(doc);
+                    final status = penghuni.paymentHistory
+                            .containsKey('$selectedMonth-$selectedYear')
+                        ? 'Sudah Bayar'
+                        : 'Belum Bayar';
+                    return status == filterStatus;
+                  }).toList();
+                }
 
-                final filteredDocs = data.docs.where((doc) {
-                  return (doc.data() as Map<String, dynamic>)['blok'] == selectedBlok;
-                }).toList();
+                return ListView.builder(
+                  itemCount: penghuniDocs.length,
+                  itemBuilder: (context, index) {
+                    final penghuniDoc = penghuniDocs[index];
+                    final penghuni = Penghuni.fromFirestore(penghuniDoc);
+                    final status = penghuni.paymentHistory
+                            .containsKey('$selectedMonth-$selectedYear')
+                        ? 'Sudah Bayar'
+                        : 'Belum Bayar';
 
-                return ListView(
-                  children: filteredDocs.map((DocumentSnapshot document) {
-                    try {
-                      final penghuni = Penghuni.fromMap(document.data() as Map<String, dynamic>);
-                      return DataPenghuni(
-                        key: ValueKey(document.id),
-                        penghuni: penghuni,
-                        documentId: document.id,
-                        selectedMonth: selectedMonth,
-                        selectedYear: selectedYear,
-                      );
-                    } catch (e) {
-                      print('Database Error ${document.id}: $e');
-                      return ListTile(
-                        title: Text('Data Error'),
-                        subtitle: Text('ID: ${document.id}'),
-                      );
-                    }
-                  }).toList(),
+                    return Card(
+                      margin: EdgeInsets.all(15),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(
+                            color: Color(0xFFD7D7D7),
+                            width: 3,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              spreadRadius: 2,
+                              blurRadius: 8,
+                              offset: Offset(0, 5),
+                            ),
+                          ],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: EdgeInsets.all(5),
+                        child: ListTile(
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(penghuni.name,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            const Color.fromARGB(255, 0, 0, 0),
+                                      )),
+                                ),
+                              ),
+                            ],
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  'Blok ${penghuni.blok}${penghuni.noblok} no. ${penghuni.numb}'),
+                              Text(
+                                  'Harga: Rp${penghuni.price.toStringAsFixed(0)}'),
+                              Text('Status: $status'),
+                            ],
+                          ),
+                          trailing: GestureDetector(
+                            onTap: () async {
+                              if (status == 'Sudah Bayar') {
+                                try {
+                                  String imageUrl = await FirebaseStorage
+                                      .instance
+                                      .ref()
+                                      .child(
+                                          'payment_images/${penghuniDoc.id}/$selectedMonth-$selectedYear.jpg')
+                                      .getDownloadURL();
+
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) => Dialog(
+                                      child: Image.network(imageUrl),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  print('Error fetching image: $e');
+                                }
+                              }
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: status == 'Sudah Bayar'
+                                    ? Colors.green
+                                    : Colors.red,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class DataPenghuni extends StatefulWidget {
-  final Penghuni penghuni;
-  final String documentId;
-  final String selectedMonth;
-  final int selectedYear;
-
-  DataPenghuni({
-    Key? key,
-    required this.penghuni,
-    required this.documentId,
-    required this.selectedMonth,
-    required this.selectedYear,
-  }) : super(key: key);
-
-  @override
-  _DataPenghuniState createState() => _DataPenghuniState();
-}
-
-class _DataPenghuniState extends State<DataPenghuni> {
-  late Map<String, bool> paymentStatus;
-  late double total;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  @override
-  void initState() {
-    super.initState();
-    paymentStatus = {};
-    total = 0;
-    fetchPaymentStatus();
-  }
-
-  Future<void> fetchPaymentStatus() async {
-    try {
-      DocumentSnapshot snapshot = await _firestore
-          .collection('payments')
-          .doc('${widget.documentId}/${widget.selectedMonth}/${widget.selectedYear}')
-          .get();
-
-      if (snapshot.exists) {
-        setState(() {
-          paymentStatus = Map<String, bool>.from(snapshot['status']);
-          calculateTotal();
-        });
-      } else {
-        setState(() {
-          paymentStatus = {widget.penghuni.name: false};
-        });
-      }
-    } catch (e) {
-      print('Error Mengambil Data: $e');
-    }
-  }
-
-  void calculateTotal() {
-    double Biaya = widget.penghuni.price;
-    total = 0;
-    paymentStatus.forEach((name, Bayar) {
-      if (Bayar) {
-        total += Biaya;
-      }
-    });
-  }
-
-  void togglePaymentStatus(String name, double Biaya) {
-    setState(() {
-      paymentStatus[name] = !(paymentStatus[name] ?? false);
-      calculateTotal();
-      savePaymentStatus();
-    });
-  }
-
-  Future<void> savePaymentStatus() async {
-    try {
-      await _firestore
-          .collection('payments')
-          .doc('${widget.documentId}/${widget.selectedMonth}/${widget.selectedYear}')
-          .set({'status': paymentStatus});
-    } catch (e) {
-      print('Error Simpan Data: $e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    double semester = widget.penghuni.price * 12;
-
-    return Card(
-      margin: EdgeInsets.all(15.0),
-      child: Container(
-        color: Color(0xFFFFC397),
-        padding: EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        widget.penghuni.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        '${widget.penghuni.blok}${widget.penghuni.noblok} no. ${widget.penghuni.numb}',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Per Bulan \t\t\t\t\t\t\t: Rp${widget.penghuni.price.toStringAsFixed(0)}',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              Text(
-                                'Per Semester : Rp${semester.toStringAsFixed(0)}',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: ListView(
-                            shrinkWrap: true,
-                            children: paymentStatus.keys.map((name) {
-                              bool Bayar = paymentStatus[name] ?? false;
-                              return ListTile(
-                                trailing: SizedBox(
-                                  height: 25,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Bayar ? Colors.green : Colors.red,
-                                    ),
-                                    child: Text(
-                                      Bayar ? 'Sudah Bayar' : 'Belum Bayar',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Bayar ? Colors.black : Colors.white,
-                                      ),
-                                    ),
-                                    onPressed: () {
-                                      togglePaymentStatus(name, widget.penghuni.price);
-                                    },
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

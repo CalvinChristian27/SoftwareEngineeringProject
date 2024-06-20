@@ -12,7 +12,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
   final TextEditingController _descController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   final TextEditingController _priceController = TextEditingController();
-  
+
   Future<void> _pickDate() async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -35,7 +35,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
         'desc': _descController.text,
         'date': Timestamp.fromDate(_selectedDate),
         'price': double.tryParse(_priceController.text) ?? 0.0,
-        }).then((_) {
+      }).then((_) {
         Navigator.pop(context);
       });
     }
@@ -46,7 +46,7 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: Text('Tambah Penghuni'),
+        title: Text('Tambah Riwayat Transaksi'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -59,28 +59,31 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: _status == 'Penghasilan' ? Colors.orange : Colors.grey),
-                        onPressed: (){
-                          setState(() {
-                            _status = 'Penghasilan';
-                          });
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('PENGHASILAN'),
-                          ],
-                          /* Flexible(child: Icon(Icons.arrow_circle_up_rounded, color: Colors.green)),
-                            SizedBox(width: 8),
-                            Flexible(child: Text('PENGHASILAN')), */
-                        ),
-                      )
-                    ),
+                        child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: _status == 'Penghasilan'
+                              ? Colors.orange
+                              : Colors.grey),
+                      onPressed: () {
+                        setState(() {
+                          _status = 'Penghasilan';
+                        });
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('PENGHASILAN'),
+                        ],
+                      ),
+                    )),
                     SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: _status == 'Pengeluaran' ? Colors.orange : Colors.grey,),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _status == 'Pengeluaran'
+                              ? Colors.orange
+                              : Colors.grey,
+                        ),
                         onPressed: () {
                           setState(() {
                             _status = 'Pengeluaran';
@@ -91,9 +94,6 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                           children: [
                             Text('PENGELUARAN'),
                           ],
-                          /* Flexible(child: Icon(Icons.arrow_circle_down_rounded, color: Colors.red)),
-                            SizedBox(width: 8),
-                            Flexible(child: Text('PENGELUARAN')), */
                         ),
                       ),
                     ),
@@ -114,7 +114,8 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Icon(Icons.date_range),
-                  Text('Tanggal Transaksi: ${_selectedDate.toLocal().toIso8601String().split('T')[0]}'),
+                  Text(
+                      'Tanggal Transaksi: ${_selectedDate.toLocal().toIso8601String().split('T')[0]}'),
                   TextButton(
                     onPressed: _pickDate,
                     child: Text('Pilih Tanggal'),
@@ -123,7 +124,8 @@ class _TambahTransaksiPageState extends State<TambahTransaksiPage> {
               ),
               TextFormField(
                 controller: _priceController,
-                decoration: InputDecoration(labelText: 'Harga', icon: Icon(Icons.credit_card)),
+                decoration: InputDecoration(
+                    labelText: 'Harga', icon: Icon(Icons.credit_card)),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
