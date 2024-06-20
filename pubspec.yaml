@@ -1,18 +1,21 @@
-name: kostmanagement
+name: user
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: '>=3.4.1 <4.0.0'
+  sdk: '>=3.4.3 <4.0.0'
 
 dependencies:
   cloud_firestore: ^4.17.5
   firebase_core: ^2.32.0
+  firebase_storage: ^11.7.7
   flutter:
     sdk: flutter
+  image_picker: ^1.1.2
   intl: ^0.19.0
   provider: ^6.0.3
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +24,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/image.png
